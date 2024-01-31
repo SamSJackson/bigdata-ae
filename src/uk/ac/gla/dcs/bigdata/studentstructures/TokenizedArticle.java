@@ -2,27 +2,42 @@ package uk.ac.gla.dcs.bigdata.studentstructures;
 
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
+import uk.ac.gla.dcs.bigdata.providedutilities.TextPreProcessor;
 
 import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CleanArticle implements Serializable {
+public class TokenizedArticle implements Serializable {
 
+    private final TextPreProcessor textProcessor = new TextPreProcessor();
     private static final long serialVersionID = -2520998L;
 
     private String docid;
-    private String title;
-    private String contentsText;
 
-    public CleanArticle() {}
+    private List<String> tokenizedText;
 
-    public CleanArticle(NewsArticle article) {
+    /**
+     * Default constructor
+     */
+    public TokenizedArticle() {}
+
+    /**
+     * Constructor for converting NewsArticle to CleanArticle
+     * @param article
+     */
+    public TokenizedArticle(NewsArticle article) {
         this.docid = article.getId();
-        this.title = article.getTitle();
-        this.contentsText = this.parseContents(article.getContents());
+        this.tokenizedText = textProcessor.process(
+                article.getTitle() + " " + this.parseContents(article.getContents())
+        );
     }
 
+    /**
+     * Parse the useful contentItems - of subtype paragraph, at most first 5.
+     * @param contents
+     * @return contentCappedString
+     */
     private String parseContents(List<ContentItem> contents) {
         List<String> paragraphContents = contents.stream()
                 .filter(cItem -> {
@@ -42,23 +57,15 @@ public class CleanArticle implements Serializable {
         return docid;
     }
 
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
     public void setDocid(String docid) {
         this.docid = docid;
     }
 
-    public String getContentsText() {
-        return contentsText;
+    public List<String> getTokenizedText() {
+        return tokenizedText;
     }
 
-    public void setContentsText(String contentsText) {
-        this.contentsText = contentsText;
+    public void setTokenizedText(List<String> tokenizedText) {
+        this.tokenizedText = tokenizedText;
     }
 }
