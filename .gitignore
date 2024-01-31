@@ -1,0 +1,7 @@
+target
+data
+bin
+.settings
+.classpath
+pom.xml
+Notes.docx
