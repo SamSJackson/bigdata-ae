@@ -2,12 +2,11 @@ package uk.ac.gla.dcs.bigdata.apps;
 
 import java.io.File;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Map;
 
-import org.apache.poi.ss.formula.functions.T;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -20,10 +19,11 @@ import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
-import uk.ac.gla.dcs.bigdata.studentfunctions.map.NewsArticleToTokenizedArticleMap;
-import uk.ac.gla.dcs.bigdata.studentfunctions.map.TokenizedArticleToTermFrequencyArticleMap;
-import uk.ac.gla.dcs.bigdata.studentstructures.TermFrequencyArticle;
-import uk.ac.gla.dcs.bigdata.studentstructures.TokenizedArticle;
+import uk.ac.gla.dcs.bigdata.providedutilities.DPHScorer;
+import uk.ac.gla.dcs.bigdata.studentfunctions.map.*;
+import uk.ac.gla.dcs.bigdata.studentfunctions.reduce.ReduceQueryTermToDistinctSingleList;
+import uk.ac.gla.dcs.bigdata.studentfunctions.reduce.SumTermAppearanceCounts;
+import uk.ac.gla.dcs.bigdata.studentstructures.*;
 
 /**
  * This is the main class where your Spark topology should be specified.
@@ -45,7 +45,7 @@ public class AssessedExercise {
 		// The code submitted for the assessed exerise may be run in either local or remote modes
 		// Configuration of this will be performed based on an environment variable
 		String sparkMasterDef = System.getenv("spark.master");
-		if (sparkMasterDef==null) sparkMasterDef = "local[2]"; // default is local mode with two executors
+		if (sparkMasterDef==null) sparkMasterDef = "local[4]"; // default is local mode with two executors
 
 		String sparkSessionName = "BigDataAE"; // give the session a name
 
@@ -67,6 +67,7 @@ public class AssessedExercise {
 
 		// Get the location of the input news articles
 		String newsFile = System.getenv("bigdata.news");
+//		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v2.jl.fix.json"; // Full file - 509511 articles
 		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
 
 		// Call the student's code
@@ -107,19 +108,12 @@ public class AssessedExercise {
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
 
-		long newsCount = news.count();
-		System.out.println("Number of news articles: " + newsCount);
+		Dataset<QueryTermList> queryTermListDataset = queries.map(new QueryToQueryTermList(), Encoders.bean(QueryTermList.class));
+		List<String> queryTermList = queryTermListDataset.reduce(new ReduceQueryTermToDistinctSingleList()).getQueryTerms();
 
-		Set<String> queryTerms = queries.collectAsList()
-				.stream()
-				.map(q -> {
-					return q.getQueryTerms();
-				}).flatMap(List::stream)
-				.collect(Collectors.toSet());
-
-		Broadcast<Set<String>> queryTermsBV = JavaSparkContext
+		Broadcast<List<String>> queryTermsBV = JavaSparkContext
 				.fromSparkContext(spark.sparkContext())
-				.broadcast(queryTerms);
+				.broadcast(queryTermList);
 
 		LongAccumulator documentLengthAccumulator = spark.sparkContext().longAccumulator();
 		NewsArticleToTokenizedArticleMap articleTokenizationMap = new NewsArticleToTokenizedArticleMap(documentLengthAccumulator);
@@ -127,15 +121,29 @@ public class AssessedExercise {
 		Dataset<TokenizedArticle> tokenizedNews = news.map(articleTokenizationMap, Encoders.bean(TokenizedArticle.class));
 
 		long tokenizedArticles = tokenizedNews.count();
-		long documentLength = documentLengthAccumulator.value();
-		double averageDocumentLength = documentLength / tokenizedArticles;
-		System.out.println("Average length of document (in terms): " + averageDocumentLength);
+		long summedDocLength = documentLengthAccumulator.value();
+		double averageDocumentLength = summedDocLength / tokenizedArticles;
+
+		System.out.println("Number of articles: " + tokenizedArticles);
 
 		TokenizedArticleToTermFrequencyArticleMap tokenizeToTFArticleMap = new TokenizedArticleToTermFrequencyArticleMap(queryTermsBV);
 		Dataset<TermFrequencyArticle> tfArticles = tokenizedNews.map(tokenizeToTFArticleMap, Encoders.bean(TermFrequencyArticle.class));
 
-		tfArticles.show();
+		/** INVESTIGATE ROOM TO IMPROVE HERE */
+		// Can this be an accumulator effect instead? Unlikely since this is a read-only object so cant change hashmap
+		// Also forced to convert to integer since short is too small.
+		Dataset<TermFrequencyHashMap> tfPerDocument = tfArticles.map(new TermFrequencyArticleToHashMap(), Encoders.bean(TermFrequencyHashMap.class));
+		Map<String, Integer> summedCounts = tfPerDocument.reduce(new SumTermAppearanceCounts(queryTermsBV)).getTermFrequencyCount();
 
+		Broadcast<Map<String, Integer>> summedCountsBV = JavaSparkContext
+				.fromSparkContext(spark.sparkContext())
+				.broadcast(summedCounts);
+
+		ScoreArticlePerTerm articleScoringMap = new ScoreArticlePerTerm(summedCountsBV, averageDocumentLength, tokenizedArticles);
+
+		Dataset<DPHTermScoredArticle> dphTermScoredArticles = tfArticles.map(articleScoringMap, Encoders.bean(DPHTermScoredArticle.class));
+
+		dphTermScoredArticles.show();
 		return null; // replace this with the list of DocumentRanking output by your topology
 	}
 }

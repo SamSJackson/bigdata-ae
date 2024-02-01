@@ -4,16 +4,18 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class TermFrequencyArticle implements Serializable {
 
     private static final long serialVersionID = -2520997L;
 
-    private Map<String, Integer> termFrequencyCount = new HashMap<>();
+    private Map<String, Short> termFrequencyCount = new HashMap<>();
 
     private String docid;
+    private String title;
     private List<String> tokenizedText;
+
+    private int docLength;
 
     public TermFrequencyArticle() {}
 
@@ -22,26 +24,44 @@ public class TermFrequencyArticle implements Serializable {
      * @param article
      * @param queryTerms
      */
-    public TermFrequencyArticle(TokenizedArticle article, Set<String> queryTerms) {
+    public TermFrequencyArticle(TokenizedArticle article, List<String> queryTerms) {
         this.docid = article.getDocid();
         this.tokenizedText = article.getTokenizedText();
+        this.title = article.getTitle();
+        this.docLength = this.tokenizedText.size();
 
         List<String> tokenizedWords = article.getTokenizedText();
-        for (String term : queryTerms) { this.termFrequencyCount.put(term, 0); }
+        for (String term : queryTerms) { this.termFrequencyCount.put(term, (short) 0); }
 
         // O(n) runtime since containsKey is O(1) amortized
         for (String word : tokenizedWords) {
             if (!this.termFrequencyCount.containsKey(word)) { continue; }
-            this.termFrequencyCount.put(word, this.termFrequencyCount.get(word) + 1);
+            this.termFrequencyCount.put(word, (short) (this.termFrequencyCount.get(word) + 1));
         }
     }
 
-    public Map<String, Integer> getTermFrequencyCount() {
+    public Map<String, Short> getTermFrequencyCount() {
         return termFrequencyCount;
     }
 
-    public void setTermFrequencyCount(Map<String, Integer> termFrequencyCount) {
+    public void setTermFrequencyCount(Map<String, Short> termFrequencyCount) {
         this.termFrequencyCount = termFrequencyCount;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public int getDocLength() {
+        return docLength;
+    }
+
+    public void setDocLength(int docLength) {
+        this.docLength = docLength;
     }
 
     public String getDocid() {

@@ -5,18 +5,18 @@ import org.apache.spark.broadcast.Broadcast;
 import uk.ac.gla.dcs.bigdata.studentstructures.TermFrequencyArticle;
 import uk.ac.gla.dcs.bigdata.studentstructures.TokenizedArticle;
 
-import java.util.Set;
+import java.util.List;
 
 public class TokenizedArticleToTermFrequencyArticleMap implements MapFunction<TokenizedArticle, TermFrequencyArticle> {
-    Broadcast<Set<String>> queryTermsBV;
+    Broadcast<List<String>> queryTermsBV;
 
-    public TokenizedArticleToTermFrequencyArticleMap(Broadcast<Set<String>> queryTermsBV) {
+    public TokenizedArticleToTermFrequencyArticleMap(Broadcast<List<String>> queryTermsBV) {
         this.queryTermsBV = queryTermsBV;
     }
 
     @Override
     public TermFrequencyArticle call(TokenizedArticle value) throws Exception {
-        Set<String> queryTerms = queryTermsBV.value();
+        List<String> queryTerms = queryTermsBV.value();
         return new TermFrequencyArticle(value, queryTerms);
     }
 }

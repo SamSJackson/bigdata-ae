@@ -16,6 +16,7 @@ public class TokenizedArticle implements Serializable {
     private String docid;
 
     private List<String> tokenizedText;
+    private String title;
 
     /**
      * Default constructor
@@ -28,6 +29,7 @@ public class TokenizedArticle implements Serializable {
      */
     public TokenizedArticle(NewsArticle article) {
         this.docid = article.getId();
+        this.title = article.getTitle();
         this.tokenizedText = textProcessor.process(
                 article.getTitle() + " " + this.parseContents(article.getContents())
         );
@@ -41,7 +43,7 @@ public class TokenizedArticle implements Serializable {
     private String parseContents(List<ContentItem> contents) {
         List<String> paragraphContents = contents.stream()
                 .filter(cItem -> {
-                    return (cItem.getSubtype() != null && cItem.getSubtype().equals("paragraph"));
+                    return (cItem != null && cItem.getSubtype() != null && cItem.getSubtype().equals("paragraph"));
                 }).map(c -> {
                     return c.getContent();
                 }).collect(Collectors.toList());
@@ -51,6 +53,14 @@ public class TokenizedArticle implements Serializable {
                 .collect(Collectors.joining(" "));
 
         return contentCappedString;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getDocid() {
