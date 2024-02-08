@@ -1,5 +1,6 @@
 package uk.ac.gla.dcs.bigdata.studentstructures;
 
+import org.apache.spark.util.LongAccumulator;
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedutilities.TextPreProcessor;

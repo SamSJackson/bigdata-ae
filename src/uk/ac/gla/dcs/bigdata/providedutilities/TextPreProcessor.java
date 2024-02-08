@@ -37,16 +37,15 @@ public class TextPreProcessor {
 	 */
 	public List<String> process(String text) {
 		String[] inputTokens = tokeniser.getTokens(text);
-		
+
 		if (inputTokens==null) return new ArrayList<String>(0);
-		
+
 		List<String> outTokens = new ArrayList<String>(inputTokens.length);
 		for (int i =0; i<inputTokens.length; i++) {
 			String processedTerm = termProcessingPipeline.pipelineTerm(inputTokens[i]);
 			if (processedTerm==null) continue;
 			outTokens.add(processedTerm);
 		}
-		
 		return outTokens;
 	}
 	

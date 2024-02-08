@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class TermFrequencyArticle implements Serializable {
 
@@ -22,22 +23,14 @@ public class TermFrequencyArticle implements Serializable {
     /**
      * Compute term frequencies of query terms
      * @param article
-     * @param queryTerms
+     * @param termFrequencyCount
      */
-    public TermFrequencyArticle(TokenizedArticle article, List<String> queryTerms) {
+    public TermFrequencyArticle(TokenizedArticle article, Map<String, Short> termFrequencyCount) {
         this.docid = article.getDocid();
         this.tokenizedText = article.getTokenizedText();
         this.title = article.getTitle();
+        this.termFrequencyCount = termFrequencyCount;
         this.docLength = this.tokenizedText.size();
-
-        List<String> tokenizedWords = article.getTokenizedText();
-        for (String term : queryTerms) { this.termFrequencyCount.put(term, (short) 0); }
-
-        // O(n) runtime since containsKey is O(1) amortized
-        for (String word : tokenizedWords) {
-            if (!this.termFrequencyCount.containsKey(word)) { continue; }
-            this.termFrequencyCount.put(word, (short) (this.termFrequencyCount.get(word) + 1));
-        }
     }
 
     public Map<String, Short> getTermFrequencyCount() {

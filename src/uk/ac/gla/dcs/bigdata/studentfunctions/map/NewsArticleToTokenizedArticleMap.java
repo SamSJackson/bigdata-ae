@@ -1,6 +1,7 @@
 package uk.ac.gla.dcs.bigdata.studentfunctions.map;
 
 import org.apache.spark.api.java.function.MapFunction;
+
 import org.apache.spark.util.LongAccumulator;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.studentstructures.TokenizedArticle;

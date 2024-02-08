@@ -15,16 +15,15 @@ public class ScoreArticlePerTerm implements MapFunction<TermFrequencyArticle, DP
     private double avgDocLength;
     private long numDocs;
 
-    public ScoreArticlePerTerm(Broadcast<Map<String, Integer>> totalTermCountsBV, double avgDocLength, long numDocs) {
+    public ScoreArticlePerTerm(Broadcast<Map<String, Integer>> totalTermCountsBV, Broadcast<Double> avgDocLength, Broadcast<Long> numDocs) {
         this.totalTermCountsBV = totalTermCountsBV;
-        this.avgDocLength = avgDocLength;
-        this.numDocs = numDocs;
+        this.avgDocLength = avgDocLength.value();
+        this.numDocs = numDocs.value();
     }
 
     @Override
     public DPHTermScoredArticle call(TermFrequencyArticle value) throws Exception {
         Map<String, Integer> totalTermCounts = totalTermCountsBV.value();
-        // Mistake is happening here.
         Map<String, Short> tfsInDoc = value.getTermFrequencyCount();
         int docLength = value.getDocLength();
 
@@ -33,8 +32,6 @@ public class ScoreArticlePerTerm implements MapFunction<TermFrequencyArticle, DP
             short tfInDoc = tfsInDoc.get(term);
             int totalTermCount = totalTermCounts.get(term);
 
-            // We can comfortably set to 0 if we know that DPH score is only positive. Then 0 has no impact on the average.
-            // THIS IS ASSUMING THAT DPH >= 0
             if (tfInDoc == 0) { dphPerTermMap.put(term, 0.0); continue; }
 
             double dphScore = DPHScorer.getDPHScore(
