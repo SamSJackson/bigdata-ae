@@ -1,22 +1,24 @@
 package uk.ac.gla.dcs.bigdata.studentstructures;
 
-import java.io.Serializable;
-import java.util.Map;
+import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 
-public class DPHQueryScoredArticles implements Serializable{
+import java.io.Serializable;
+
+public class DPHQueryScoredArticle implements Serializable{
 
     private static final long serialVersionID = 2385679;
 
     private String docid;
     private String title;
     private Double queryScore;
-    private Integer queryid;
+    private Query query;
 
-    public DPHQueryScoredArticles(String docid, String title, Double queryScore, Integer queryid) {
+
+    public DPHQueryScoredArticle(String docid, String title, Double queryScore, Query query) {
         this.docid = docid;
         this.title = title;
         this.queryScore = queryScore;
-        this.queryid = queryid;
+        this.query = query;
     }
 
     public String getDocid() {
@@ -43,12 +45,12 @@ public class DPHQueryScoredArticles implements Serializable{
         this.queryScore = queryScore;
     }
 
-    public Integer getQueryid() {
-        return queryid;
+    public Query getQuery() {
+        return query;
     }
 
-    public void setQueryid(Integer queryid) {
-        this.queryid = queryid;
+    public void setQuery(Query query) {
+        this.query = query;
     }
 }
 
