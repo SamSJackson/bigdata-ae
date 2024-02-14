@@ -31,6 +31,7 @@ public class QueryTermToQueryPerArticleFlatMap implements FlatMapFunction<DPHTer
             for (String term: query.getQueryTerms()){
                 scoreSum = scoreSum + dphTermScore.get(term);
             }
+            if (scoreSum == 0) { continue; }
             DPHQueryScoredArticle article = new DPHQueryScoredArticle(value.getDocid(), value.getTitle(), scoreSum/length, query);
             dphArticles.add(article);
         }
