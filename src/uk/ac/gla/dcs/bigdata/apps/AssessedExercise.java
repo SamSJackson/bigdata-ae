@@ -7,18 +7,15 @@ import java.util.Map;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
 
 import org.apache.spark.util.LongAccumulator;
-import org.codehaus.janino.Java;
 import uk.ac.gla.dcs.bigdata.providedfunctions.NewsFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
+import uk.ac.gla.dcs.bigdata.studentfunctions.flatmap.QueryTermToQueryPerArticleFlatMap;
 import uk.ac.gla.dcs.bigdata.studentfunctions.reduce.ReduceQueryTermToDistinctSingleList;
 import uk.ac.gla.dcs.bigdata.studentfunctions.map.*;
 import uk.ac.gla.dcs.bigdata.studentstructures.*;
@@ -106,6 +103,8 @@ public class AssessedExercise {
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
 
+		List<Query> queryList = queries.collectAsList();
+
 		Dataset<QueryTermList> queryTermListDataset = queries.map(new QueryToQueryTermList(), Encoders.bean(QueryTermList.class));
 		List<String> queryTermList = queryTermListDataset.reduce(new ReduceQueryTermToDistinctSingleList()).getQueryTerms();
 
@@ -150,7 +149,18 @@ public class AssessedExercise {
 		Dataset<DPHTermScoredArticle> dphTermScoredArticles = tfArticles
 				.map(articleScoringMap, Encoders.bean(DPHTermScoredArticle.class));
 
-		dphTermScoredArticles.show();
+		Broadcast<List<Query>> queryBV = JavaSparkContext
+				.fromSparkContext(spark.sparkContext())
+				.broadcast(queryList);
+
+		QueryTermToQueryPerArticleFlatMap queryTermToQueryPerArticle = new QueryTermToQueryPerArticleFlatMap(queryBV);
+
+		Dataset<DPHQueryScoredArticle> dphQueryScoredArticles = dphTermScoredArticles
+				.flatMap(queryTermToQueryPerArticle, Encoders.bean(DPHQueryScoredArticle.class))
+				.sort((new Column("queryScore")).desc());
+
+		dphQueryScoredArticles.show();
+
 		return null; // replace this with the list of DocumentRanking output by your topology
 	}
 }
